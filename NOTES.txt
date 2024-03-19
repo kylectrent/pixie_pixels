@@ -1,0 +1,1 @@
+have the rainbow be more like here https://threejs.org/examples/#webgl_framebuffer_texture
