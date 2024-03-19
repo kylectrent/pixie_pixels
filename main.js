@@ -14,7 +14,7 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
-//const material = new THREE.MeshBasicMaterial( { color: rainbowColors[colorCount] } );
+
 const material = new THREE.ShaderMaterial({
     uniforms: {
         time: { value: 0 }
@@ -51,6 +51,13 @@ const material = new THREE.ShaderMaterial({
             
             // Interpolate between the two colors based on the rotation angle
             vec3 color = mix(rainbowColors[index1], rainbowColors[index2], t);
+
+            // Calculate distance from UV center to create a circle
+            float dist = distance(vUv, vec2(0.5));
+            if (dist < 0.3) {
+                color = vec3(0.0, 0.0, 0.0); // Set color to black inside the circle
+            }
+
             
             gl_FragColor = vec4(color, 1.0);
         }
@@ -58,8 +65,6 @@ const material = new THREE.ShaderMaterial({
 });
 const cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
-
-
 
 camera.position.z = 5;
 
@@ -69,6 +74,7 @@ composer.addPass(new RenderPass(scene, camera));
 
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .5, 0.5, 0.1);
 composer.addPass(bloomPass);
+
 
 function animate() {
 	requestAnimationFrame( animate );
