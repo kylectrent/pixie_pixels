@@ -6,6 +6,16 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 const scene = new THREE.Scene();
 
+scene.add( new THREE.AmbientLight( 0x444444, 3 ) );
+
+				const light1 = new THREE.DirectionalLight( 0xffffff, 1.5 );
+				light1.position.set( 1, 1, 1 );
+				scene.add( light1 );
+
+				const light2 = new THREE.DirectionalLight( 0xffffff, 4.5 );
+				light2.position.set( 0, - 1, 0 );
+				scene.add( light2 );
+
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -50,14 +60,34 @@ const material = new THREE.ShaderMaterial({
             float t = (hue * 6.0) - float(index1);
             
             // Interpolate between the two colors based on the rotation angle
-            vec3 color = mix(rainbowColors[index1], rainbowColors[index2], t);
+            vec3 color = vec3(1.0, 1.0, 1.0);
 
             // Calculate distance from UV center to create a circle
             float dist = distance(vUv, vec2(0.5));
-            if (dist < 0.3) {
-                color = vec3(0.0, 0.0, 0.0); // Set color to black inside the circle
+            if (dist < 0.4) {
+                color = mix(rainbowColors[index1], rainbowColors[index2], t); // White
+                
+                if (dist > 0.39) {
+                    color = vec3(0.0); // Black
+                }
+                
             }
 
+            // Add a black outline to the circle
+            if (dist > 0.41) {
+                 color = vec3(0.0); // Black
+            }
+
+            // Check if fragment is near the edges of the cube
+            float edgeThreshold = 0.01;
+            if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
+                if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold) {
+                    color = vec3(1.0); // White (Horizontal edges)
+                }
+                if (vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
+                    color = vec3(1.0); // White (Vertical edges)
+                }
+            }
             
             gl_FragColor = vec4(color, 1.0);
         }
