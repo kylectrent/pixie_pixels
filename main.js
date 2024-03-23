@@ -43,61 +43,51 @@ const material = new THREE.ShaderMaterial({
         
         void main() {
             vec3 rainbowColors[6];
-            rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
-            rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
-            rainbowColors[2] = vec3(0.0, 1.0, 0.0); // Green
-            rainbowColors[3] = vec3(0.0, 1.0, 1.0); // Cyan
-            rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
-            rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
+            rainbowColors[0] = vec3(1.0, 0.0, 0.0);
+            rainbowColors[1] = vec3(1.0, 1.0, 0.0);
+            rainbowColors[2] = vec3(0.0, 1.0, 0.0);
+            rainbowColors[3] = vec3(0.0, 1.0, 1.0);
+            rainbowColors[4] = vec3(0.0, 0.0, 1.0);
+            rainbowColors[5] = vec3(1.0, 0.0, 1.0);
 
             float angle = mod(time * 1.0, 2.0 * 3.14159265359);
             float hue = angle / (2.0 * 3.14159265359);
             int index1 = int(floor(hue * 6.0));
             int index2 = int(mod(float(index1 + 1), 6.0));
             float t = (hue * 6.0) - float(index1);
-            vec3 interpolatedColor = mix(rainbowColors[index1], rainbowColors[index2], t);
+            vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-            // Checkerboard pattern size
-            float checkerSize = 0.1; // Size of the checker squares
+            float checkerSize = 0.1;
 
-            // Finer pixelation for the circle's edge
-            float finerPixelSize = checkerSize / 5.0; // 5 times finer than the checker size
-            vec2 finerPixelatedPos = floor(vUv / finerPixelSize) * finerPixelSize + finerPixelSize * 0.5;
-            float finerPixelatedDistToCenter = distance(finerPixelatedPos, vec2(0.5, 0.5));
-            bool isNearEdge = abs(finerPixelatedDistToCenter - 0.4) < finerPixelSize; // Adjusted for smaller circle
+            vec2 pixelatedPosition = floor(vUv / (checkerSize / 4.0)) * (checkerSize / 4.0);
+            float pixelatedDistToCenter = distance(pixelatedPosition + (checkerSize / 5.0) * 0.5, vec2(0.5, 0.5));
+            bool isInsidePixelatedCircle = pixelatedDistToCenter < 0.39;
 
-            // Determine if inside the smaller circle
-            float distToCenter = distance(vUv, vec2(0.5, 0.5));
-            bool isInsideCircle = distToCenter < 0.4; // Smaller circle radius
-
-            // Thin, transitioning checkerboard lines
             vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
-            bool isLine = linePosition.x < 0.15 || linePosition.y < 0.15; // Thin lines
+            bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
-            vec3 color;
-            if (isInsideCircle) {
-                if (isNearEdge) {
-                    color = vec3(0.0); // Edge color
-                } else if (isLine) {
-                    color = interpolatedColor; // Transitioning line color inside the circle
-                } else {
-                    color = vec3(1.0); // Rainbow color outside the lines
-                }
-            } else {
-                color = vec3(0); // Background color outside the circle
+            vec3 color = vec3(0.0); // Default background color
+
+            // Determine if within the extended area for line drawing, slightly larger than the pixelated circle
+            float distToCenter = distance(vUv, vec2(0.5, 0.5));
+            bool isInsideExtendedArea = distToCenter < 0.46;
+
+            // Prioritize drawing the circle with a pixelated edge
+            if (isInsidePixelatedCircle) {
+                color = vec3(1.0); // Color inside the circle
             }
 
-            // Check if fragment is near the edges of the cube
+            // Draw checkerboard lines over the circle and background
+            if (isLine && isInsideExtendedArea) {
+                color = lineColor;
+            }
+
+            // Apply rainbow color to the cube's edges for a pulsing effect
             float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
-                if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold) {
-                    color = interpolatedColor; // White (Horizontal edges)
-                }
-                if (vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
-                    color = interpolatedColor; // White (Vertical edges)
-                }
+                color = lineColor; // Rainbow color at the cube's edges
             }
-            
+
             gl_FragColor = vec4(color, 1.0);
         }
     ` // Fragment shader code
@@ -111,7 +101,7 @@ const composer = new EffectComposer(renderer);
 
 composer.addPass(new RenderPass(scene, camera));
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .5, 0.5, 0.1);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .1, 0.1, 0.1);
 composer.addPass(bloomPass);
 
 
