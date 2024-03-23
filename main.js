@@ -72,18 +72,16 @@ const material = new THREE.ShaderMaterial({
 
             // Thin, transitioning checkerboard lines
             vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
-            bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05; // Thin lines
-            float linePhase = sin(time) * 0.5 + 0.5; // Transitioning between 0 and 1
-            vec3 lineColor = mix(vec3(0), vec3(1), linePhase); // From black to white
+            bool isLine = linePosition.x < 0.15 || linePosition.y < 0.15; // Thin lines
 
             vec3 color;
             if (isInsideCircle) {
                 if (isNearEdge) {
                     color = vec3(0.0); // Edge color
                 } else if (isLine) {
-                    color = lineColor; // Transitioning line color inside the circle
+                    color = interpolatedColor; // Transitioning line color inside the circle
                 } else {
-                    color = interpolatedColor; // Rainbow color outside the lines
+                    color = vec3(1.0); // Rainbow color outside the lines
                 }
             } else {
                 color = vec3(0); // Background color outside the circle
@@ -93,10 +91,10 @@ const material = new THREE.ShaderMaterial({
             float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold) {
-                    color = vec3(1.0); // White (Horizontal edges)
+                    color = interpolatedColor; // White (Horizontal edges)
                 }
                 if (vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
-                    color = vec3(1.0); // White (Vertical edges)
+                    color = interpolatedColor; // White (Vertical edges)
                 }
             }
             
