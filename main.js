@@ -50,36 +50,47 @@ const material = new THREE.ShaderMaterial({
             rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
             rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
-            // Calculate the rotation angle of the cube
-            float angle = mod(time * 1.0, 2.0 * 3.14159265359); // Ensure the angle is within 0 to 2*PI
-            float hue = angle / (2.0 * 3.14159265359); // Map the angle to the range [0, 1]
-            
-            // Determine which two colors of the rainbow spectrum to interpolate between
+            float angle = mod(time * 1.0, 2.0 * 3.14159265359);
+            float hue = angle / (2.0 * 3.14159265359);
             int index1 = int(floor(hue * 6.0));
             int index2 = int(mod(float(index1 + 1), 6.0));
             float t = (hue * 6.0) - float(index1);
-            
-            // Interpolate between the two colors based on the rotation angle
-            vec3 color = vec3(1.0, 1.0, 1.0);
+            vec3 interpolatedColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-            // Calculate distance from UV center to create a circle
-            float dist = distance(vUv, vec2(0.5));
-            if (dist < 0.4) {
-                color = mix(rainbowColors[index1], rainbowColors[index2], t); // White
-                
-                if (dist > 0.39) {
-                    color = vec3(0.0); // Black
+            // Checkerboard pattern size
+            float checkerSize = 0.1; // Size of the checker squares
+
+            // Finer pixelation for the circle's edge
+            float finerPixelSize = checkerSize / 5.0; // 5 times finer than the checker size
+            vec2 finerPixelatedPos = floor(vUv / finerPixelSize) * finerPixelSize + finerPixelSize * 0.5;
+            float finerPixelatedDistToCenter = distance(finerPixelatedPos, vec2(0.5, 0.5));
+            bool isNearEdge = abs(finerPixelatedDistToCenter - 0.4) < finerPixelSize; // Adjusted for smaller circle
+
+            // Determine if inside the smaller circle
+            float distToCenter = distance(vUv, vec2(0.5, 0.5));
+            bool isInsideCircle = distToCenter < 0.4; // Smaller circle radius
+
+            // Thin, transitioning checkerboard lines
+            vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
+            bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05; // Thin lines
+            float linePhase = sin(time) * 0.5 + 0.5; // Transitioning between 0 and 1
+            vec3 lineColor = mix(vec3(0), vec3(1), linePhase); // From black to white
+
+            vec3 color;
+            if (isInsideCircle) {
+                if (isNearEdge) {
+                    color = vec3(0.0); // Edge color
+                } else if (isLine) {
+                    color = lineColor; // Transitioning line color inside the circle
+                } else {
+                    color = interpolatedColor; // Rainbow color outside the lines
                 }
-                
-            }
-
-            // Add a black outline to the circle
-            if (dist > 0.41) {
-                 color = vec3(0.0); // Black
+            } else {
+                color = vec3(0); // Background color outside the circle
             }
 
             // Check if fragment is near the edges of the cube
-            float edgeThreshold = 0.01;
+            float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold) {
                     color = vec3(1.0); // White (Horizontal edges)
