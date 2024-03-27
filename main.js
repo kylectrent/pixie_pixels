@@ -43,44 +43,51 @@ const material = new THREE.ShaderMaterial({
         
         void main() {
             vec3 rainbowColors[6];
-            rainbowColors[0] = vec3(1.0, 0.0, 0.0);
-            rainbowColors[1] = vec3(1.0, 1.0, 0.0);
-            rainbowColors[2] = vec3(0.0, 1.0, 0.0);
-            rainbowColors[3] = vec3(0.0, 1.0, 1.0);
-            rainbowColors[4] = vec3(0.0, 0.0, 1.0);
-            rainbowColors[5] = vec3(1.0, 0.0, 1.0);
+        rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
+        rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
+        rainbowColors[2] = vec3(0.0, 1.0, 0.0); // Green
+        rainbowColors[3] = vec3(0.0, 1.0, 1.0); // Cyan
+        rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
+        rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
-            float angle = mod(time * 1.0, 2.0 * 3.14159265359);
-            float hue = angle / (2.0 * 3.14159265359);
-            int index1 = int(floor(hue * 6.0));
-            int index2 = int(mod(float(index1 + 1), 6.0));
-            float t = (hue * 6.0) - float(index1);
-            vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
+        // Time-based expansion for the doughnut effect
+        float expansionRate = 0.15;
+        float startRadius = 0.15; // Starting radius for the hollow center of the doughnut
+        float bandWidth = 0.15; // Width of the rainbow band as it expands
+        float currentRadius = mod(time * expansionRate, 0.6) + startRadius + bandWidth; // Ensure it starts with a band
+        
+        float distToCenter = distance(vUv, vec2(0.5, 0.5));
+        bool isInRainbowBand = distToCenter < currentRadius && distToCenter > (currentRadius - bandWidth);
 
-            float checkerSize = 0.1;
+        // Checkerboard pattern
+        float checkerSize = 0.1;
+        vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
+        bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
-            vec2 pixelatedPosition = floor(vUv / (checkerSize / 4.0)) * (checkerSize / 4.0);
-            float pixelatedDistToCenter = distance(pixelatedPosition + (checkerSize / 5.0) * 0.5, vec2(0.5, 0.5));
-            bool isInsidePixelatedCircle = pixelatedDistToCenter < 0.39;
+        // Fractal-like pattern for the inner part
+        float pattern = sin(vUv.x * 10.0 + time * 5.0) * cos(vUv.y * 10.0 + time * 5.0);
+        bool isInFractalPattern = mod(floor(abs(pattern * 2.0)), 2.0) == 0.0;
 
-            vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
-            bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05;
+        vec3 color = vec3(0.0); // Default background color
 
-            vec3 color = vec3(0.0); // Default background color
+        // Calculate the dynamic rainbow color
+        float hue = mod(time * 0.1, 1.0);
+        int index1 = int(floor(hue * 6.0));
+        int index2 = int(mod(float(index1 + 1), 6.0));
+        float t = fract(hue * 6.0); // Fractional part for smooth color transition
+        vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-            // Determine if within the extended area for line drawing, slightly larger than the pixelated circle
-            float distToCenter = distance(vUv, vec2(0.5, 0.5));
-            bool isInsideExtendedArea = distToCenter < 0.46;
-
-            // Prioritize drawing the circle with a pixelated edge
-            if (isInsidePixelatedCircle) {
-                color = vec3(1.0); // Color inside the circle
-            }
-
-            // Draw checkerboard lines over the circle and background
-            if (isLine && isInsideExtendedArea) {
+        // Draw checkerboard pattern
+        if (isLine) {
+            if (isInRainbowBand) {
+                // Lines within the rainbow band
                 color = lineColor;
+            } else if (distToCenter <= (currentRadius - bandWidth) && isInFractalPattern) {
+                // White fractal pattern within the black area inside the doughnut
+                color = vec3(0.0);
             }
+        }
+            
 
             // Apply rainbow color to the cube's edges for a pulsing effect
             float edgeThreshold = 0.005;
