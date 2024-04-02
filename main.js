@@ -40,54 +40,61 @@ const material = new THREE.ShaderMaterial({
     fragmentShader: `
         varying vec2 vUv;
         uniform float time;
-        
+
+        float bandRadius(float startTime, float speed, float maxRadius) {
+            return mod((time - startTime) * speed, maxRadius);
+        }
+
         void main() {
             vec3 rainbowColors[6];
-        rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
-        rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
-        rainbowColors[2] = vec3(0.0, 1.0, 0.0); // Green
-        rainbowColors[3] = vec3(0.0, 1.0, 1.0); // Cyan
-        rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
-        rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
+            rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
+            rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
+            rainbowColors[2] = vec3(0.0, 1.0, 0.0); // Green
+            rainbowColors[3] = vec3(0.0, 1.0, 1.0); // Cyan
+            rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
+            rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
-        // Time-based expansion for the doughnut effect
-        float expansionRate = 0.15;
-        float startRadius = 0.15; // Starting radius for the hollow center of the doughnut
-        float bandWidth = 0.15; // Width of the rainbow band as it expands
-        float currentRadius = mod(time * expansionRate, 0.6) + startRadius + bandWidth; // Ensure it starts with a band
-        
-        float distToCenter = distance(vUv, vec2(0.5, 0.5));
-        bool isInRainbowBand = distToCenter < currentRadius && distToCenter > (currentRadius - bandWidth);
+            // Time-based expansion for the doughnut effect
+            float expansionRate = 0.15;
+            float bandWidth = 0.09; // Width of the rainbow band as it expands
+            float maxRadius = .35;
+            float timeBetweenStarts = maxRadius / expansionRate; // Time it takes for a band to reach the max radius
 
-        // Checkerboard pattern
-        float checkerSize = 0.1;
-        vec2 linePosition = mod(vUv * vec2(1.0 / checkerSize), 1.0);
-        bool isLine = linePosition.x < 0.05 || linePosition.y < 0.05;
+            float distToCenter = distance(vUv, vec2(0.5, 0.5));
 
-        // Fractal-like pattern for the inner part
-        float pattern = sin(vUv.x * 10.0 + time * 5.0) * cos(vUv.y * 10.0 + time * 5.0);
-        bool isInFractalPattern = mod(floor(abs(pattern * 2.0)), 2.0) == 0.0;
+            // Checkerboard pattern
+            float matrixSquareSize = 0.1;
+            vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
+            bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
-        vec3 color = vec3(0.0); // Default background color
+            vec3 color = vec3(0.0); // Default backbackground color
 
-        // Calculate the dynamic rainbow color
-        float hue = mod(time * 0.1, 1.0);
-        int index1 = int(floor(hue * 6.0));
-        int index2 = int(mod(float(index1 + 1), 6.0));
-        float t = fract(hue * 6.0); // Fractional part for smooth color transition
-        vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
+            // Calculate the dynamic rainbow color
+            float hue = mod(time * 0.1, 1.0);
+            int index1 = int(floor(hue * 6.0));
+            int index2 = int(mod(float(index1 + 1), 6.0));
+            float t = fract(hue * 6.0); // Fractional part for smooth color transition
+            vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-        // Draw checkerboard pattern
-        if (isLine) {
-            if (isInRainbowBand) {
-                // Lines within the rainbow band
-                color = lineColor;
-            } else if (distToCenter <= (currentRadius - bandWidth) && isInFractalPattern) {
-                // White fractal pattern within the black area inside the doughnut
-                color = vec3(0.0);
+            // Calculate how many bands should be active based on the current time
+            float firstBandStartTime = 0.0;
+            float maxBandIndex = floor((time - firstBandStartTime) / (maxRadius / expansionRate));
+
+            for (float i = 0.0; i <= maxBandIndex; i++) {
+                float startTime = firstBandStartTime + (maxRadius / expansionRate) * i;
+                float currentRadius = expansionRate * (time - startTime);
+
+                if (currentRadius - distToCenter > 0.0 && currentRadius - distToCenter < bandWidth && isMatrixLine) {
+                    float hue = mod(startTime * 0.1, 1.0);
+                    int index1 = int(floor(hue * 6.0));
+                    int index2 = int(mod(float(index1 + 1), 6.0));
+                    float t = fract(hue * 6.0);
+                    color = lineColor;
+                    break; // Exit loop after finding the first applicable band
+                }
             }
-        }
-            
+
+
 
             // Apply rainbow color to the cube's edges for a pulsing effect
             float edgeThreshold = 0.005;
