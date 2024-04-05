@@ -25,9 +25,13 @@ document.body.appendChild( renderer.domElement );
 
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 
+const textureLoader = new THREE.TextureLoader();
+const backgroundTexture = textureLoader.load('./flower-of-life-2.jpg'); // Replace with the path to your image
+
 const material = new THREE.ShaderMaterial({
     uniforms: {
-        time: { value: 0 }
+        time: { value: 0 },
+        backgroundTexture: { value: backgroundTexture }
     },
     vertexShader: `
         varying vec2 vUv;
@@ -40,6 +44,7 @@ const material = new THREE.ShaderMaterial({
     fragmentShader: `
         varying vec2 vUv;
         uniform float time;
+        uniform sampler2D backgroundTexture;
 
         float bandRadius(float startTime, float speed, float maxRadius) {
             return mod((time - startTime) * speed, maxRadius);
@@ -56,7 +61,7 @@ const material = new THREE.ShaderMaterial({
 
             // Time-based expansion for the doughnut effect
             float expansionRate = 0.15;
-            float bandWidth = 0.09; // Width of the rainbow band as it expands
+            float bandWidth = 0.15; // Width of the rainbow band as it expands
             float maxRadius = .35;
             float timeBetweenStarts = maxRadius / expansionRate; // Time it takes for a band to reach the max radius
 
@@ -65,9 +70,9 @@ const material = new THREE.ShaderMaterial({
             // Checkerboard pattern
             float matrixSquareSize = 0.1;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
-            bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
+            bool isMatrixLine = linePosition.x < 0.07 || linePosition.y < 0.07;
 
-            vec3 color = vec3(0.0); // Default backbackground color
+            vec4 texColor = texture2D(backgroundTexture, vUv);
 
             // Calculate the dynamic rainbow color
             float hue = mod(time * 0.1, 1.0);
@@ -79,7 +84,7 @@ const material = new THREE.ShaderMaterial({
             // Calculate how many bands should be active based on the current time
             float firstBandStartTime = 0.0;
             float maxBandIndex = floor((time - firstBandStartTime) / (maxRadius / expansionRate));
-
+            
             for (float i = 0.0; i <= maxBandIndex; i++) {
                 float startTime = firstBandStartTime + (maxRadius / expansionRate) * i;
                 float currentRadius = expansionRate * (time - startTime);
@@ -89,21 +94,21 @@ const material = new THREE.ShaderMaterial({
                     int index1 = int(floor(hue * 6.0));
                     int index2 = int(mod(float(index1 + 1), 6.0));
                     float t = fract(hue * 6.0);
-                    color = lineColor;
+                    texColor = vec4(lineColor, 1.0);
                     break; // Exit loop after finding the first applicable band
                 }
             }
 
-
-
             // Apply rainbow color to the cube's edges for a pulsing effect
             float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
-                color = lineColor; // Rainbow color at the cube's edges
+                texColor = vec4(lineColor, 1.0); // Rainbow color at the cube's edges
             }
 
-            gl_FragColor = vec4(color, 1.0);
+            // For instance, if you want to simply display the texture:
+            gl_FragColor = texColor;
         }
+        
     ` // Fragment shader code
 });
 const cube = new THREE.Mesh( geometry, material );
