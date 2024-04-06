@@ -28,6 +28,9 @@ const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 const textureLoader = new THREE.TextureLoader();
 const backgroundTexture = textureLoader.load('./flower-of-life-2.jpg'); // Replace with the path to your image
 
+backgroundTexture.wrapS = THREE.RepeatWrapping;
+backgroundTexture.wrapT = THREE.RepeatWrapping;
+
 const material = new THREE.ShaderMaterial({
     uniforms: {
         time: { value: 0 },
@@ -50,6 +53,19 @@ const material = new THREE.ShaderMaterial({
             return mod((time - startTime) * speed, maxRadius);
         }
 
+        // Function to rotate UV coordinates
+        vec2 rotateUV(vec2 uv, float rotation, vec2 pivot) {
+            float cosRotation = cos(rotation);
+            float sinRotation = sin(rotation);
+            uv -= pivot; // Move the pivot to the origin
+            uv = vec2(
+                uv.x * cosRotation + uv.y * sinRotation,
+                -uv.x * sinRotation + uv.y * cosRotation
+            );
+            uv += pivot; // Move the origin back to the pivot
+            return uv;
+        }
+
         void main() {
             vec3 rainbowColors[6];
             rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
@@ -70,9 +86,19 @@ const material = new THREE.ShaderMaterial({
             // Checkerboard pattern
             float matrixSquareSize = 0.1;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
-            bool isMatrixLine = linePosition.x < 0.07 || linePosition.y < 0.07;
+            bool isMatrixLine = linePosition.x < 0.1 || linePosition.y < 0.1;
 
-            vec4 texColor = texture2D(backgroundTexture, vUv);
+            // Define the pivot point of the rotation as the center of the texture
+            vec2 pivot = vec2(0.5, 0.5);
+            // Calculate the rotation amount (negative for clockwise)
+            float rotationSpeed = -0.5; // This determines the speed of the rotation
+            float rotation = time * rotationSpeed;
+
+            // Rotate the UV coordinates
+            vec2 rotatedUV = rotateUV(vUv, rotation, pivot);
+            // Sample the texture with the rotated UV coordinates
+            vec4 texColor = texture2D(backgroundTexture, rotatedUV);
+            
 
             // Calculate the dynamic rainbow color
             float hue = mod(time * 0.1, 1.0);
@@ -84,6 +110,11 @@ const material = new THREE.ShaderMaterial({
             // Calculate how many bands should be active based on the current time
             float firstBandStartTime = 0.0;
             float maxBandIndex = floor((time - firstBandStartTime) / (maxRadius / expansionRate));
+            
+            // Apply a fade effect to the texture color based on the distance to the center
+            float distanceToCenter = length(vUv - vec2(0.5, 0.5));
+            float fade = smoothstep(0.4, 0.5, distanceToCenter); // Adjust these values as needed
+            texColor.rgb *= (1.0 - fade);
             
             for (float i = 0.0; i <= maxBandIndex; i++) {
                 float startTime = firstBandStartTime + (maxRadius / expansionRate) * i;
@@ -100,7 +131,7 @@ const material = new THREE.ShaderMaterial({
             }
 
             // Apply rainbow color to the cube's edges for a pulsing effect
-            float edgeThreshold = 0.005;
+            float edgeThreshold = 0.01;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 texColor = vec4(lineColor, 1.0); // Rainbow color at the cube's edges
             }
@@ -129,6 +160,7 @@ function animate() {
 
 	cube.rotation.x += 0.01;
 	cube.rotation.y += 0.01;
+    
 
     material.uniforms.time.value = performance.now() / 1000;
 
