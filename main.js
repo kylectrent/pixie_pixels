@@ -77,7 +77,7 @@ const material = new THREE.ShaderMaterial({
 
             // Time-based expansion for the doughnut effect
             float expansionRate = 0.15;
-            float bandWidth = 0.15; // Width of the rainbow band as it expands
+            float bandWidth = 0.2; // Width of the rainbow band as it expands
             float maxRadius = .35;
             float timeBetweenStarts = maxRadius / expansionRate; // Time it takes for a band to reach the max radius
 
