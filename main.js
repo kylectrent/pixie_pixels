@@ -26,7 +26,7 @@ document.body.appendChild( renderer.domElement );
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 
 const textureLoader = new THREE.TextureLoader();
-const backgroundTexture = textureLoader.load('./flower-of-life.jpg'); // Replace with the path to your image
+const backgroundTexture = textureLoader.load('./pent.png'); // Replace with the path to your image
 
 backgroundTexture.wrapS = THREE.RepeatWrapping;
 backgroundTexture.wrapT = THREE.RepeatWrapping;
