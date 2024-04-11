@@ -45,6 +45,24 @@ const material = new THREE.ShaderMaterial({
             return mod((time - startTime) * speed, maxRadius);
         }
 
+        // Function to create a star shape outline with triangular points
+        float starOutline(vec2 uv, float size, float thickness) {
+            uv = uv * 2.0 - 1.0; // Transform uv to [-1, 1] range
+            float angle = atan(uv.y, uv.x); // Get the angle for polar coordinates
+            float radius = length(uv); // Get the radius for polar coordinates
+            float innerRadius = 0.3 * size;
+            float outerRadius = 0.5 * size;
+            float starSharpness = 5.0; // Creates five points
+            // Adjust sharpness to create more triangular points
+            float r = (0.5 + 0.5 * sin(starSharpness * angle)) * (outerRadius - innerRadius) + innerRadius;
+            return smoothstep(thickness, -thickness, abs(r - radius));
+        }
+
+        // Function to create sharp edges
+        float edge(float a, float b, float x) {
+            return step(a, x) * (1.0 - step(b, x));
+        }
+
         void main() {
             vec3 rainbowColors[6];
             rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
@@ -53,6 +71,7 @@ const material = new THREE.ShaderMaterial({
             rainbowColors[3] = vec3(0.0, 1.0, 1.0); // Cyan
             rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
             rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
+
 
             // Time-based expansion for the doughnut effect
             float expansionRate = 0.15;
@@ -100,6 +119,14 @@ const material = new THREE.ShaderMaterial({
             float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 color = lineColor; // Rainbow color at the cube's edges
+            }
+
+            // Star drawing
+            float starSize = 1.1; // Adjust size to fit within the UV mapping
+            float lineThickness = 0.015; // Adjust thickness of the star's outline
+            float starMask = starOutline(vUv, starSize, lineThickness);
+            if (starMask > 0.0) {
+                color = lineColor;
             }
 
             gl_FragColor = vec4(color, 1.0);

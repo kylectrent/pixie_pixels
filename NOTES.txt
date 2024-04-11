@@ -1,3 +1,8 @@
 have the rainbow be more like here https://threejs.org/examples/#webgl_framebuffer_texture
 
 ultimatly have it be half bnlack and half white
+
+-- draw a star with open gl not texture, having it change color at faster rate and rotate
+    in more interesting way
+    --could split star up and hvae different segments animate differently
+- have 'cross' at center of cube the matrix pattern emits from
