@@ -44,6 +44,15 @@ const material = new THREE.ShaderMaterial({
         float bandRadius(float startTime, float speed, float maxRadius) {
             return mod((time - startTime) * speed, maxRadius);
         }
+        
+        // Updated line function
+        float line(vec2 p, vec2 a, vec2 b, float width) {
+            vec2 ap = p - a;
+            vec2 ab = b - a;
+            float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
+            float dist = length(ap - t * ab);
+            return dist < width ? 1.0 : 0.0; // Draw if within width
+        }
 
         void main() {
             vec3 rainbowColors[6];
@@ -116,10 +125,27 @@ const material = new THREE.ShaderMaterial({
             float innerEdge = circleRadius - outlineWidth;
             float outerEdge = circleRadius;
             float circle = smoothstep(innerEdge, innerEdge + 0.005, len) - smoothstep(outerEdge, outerEdge + 0.005, len);
-                
-            
 
-            // Choose color: if on circle or line, use lineColor, otherwise use calculated color
+            // Updated positions of the five star points
+            float angleIncrement = 3.14159 * 2.0 / 5.0;
+            vec2 starPoints[5];
+            for (int i = 0; i < 5; i++) {
+                float angle = angleIncrement * float(i) + 3.14159 / 2.0; // Rotate to start at the top
+                starPoints[i] = vec2(cos(angle), sin(angle)) * circleRadius;
+            }
+            // Connect the star points with lines
+            float starMask = 0.0;
+            starMask += line(centeredUv, starPoints[0], starPoints[2], lineWidth);
+            starMask += line(centeredUv, starPoints[2], starPoints[4], lineWidth);
+            starMask += line(centeredUv, starPoints[4], starPoints[1], lineWidth);
+            starMask += line(centeredUv, starPoints[1], starPoints[3], lineWidth);
+            starMask += line(centeredUv, starPoints[3], starPoints[0], lineWidth);
+        
+            // Check for line drawing
+            if (starMask > 0.0) {
+                color = lineColor;
+            }
+            // Draw circle outline
             if (circle > 0.0) {
                 color = lineColor;
             }
