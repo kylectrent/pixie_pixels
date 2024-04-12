@@ -40,10 +40,6 @@ const material = new THREE.ShaderMaterial({
     fragmentShader: `
         varying vec2 vUv;
         uniform float time;
-
-        float bandRadius(float startTime, float speed, float maxRadius) {
-            return mod((time - startTime) * speed, maxRadius);
-        }
         
         // Updated line function
         float line(vec2 p, vec2 a, vec2 b, float width) {
@@ -55,6 +51,7 @@ const material = new THREE.ShaderMaterial({
         }
 
         void main() {
+            //array of rainbow colors to transition between for the lines
             vec3 rainbowColors[6];
             rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
             rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
@@ -64,20 +61,20 @@ const material = new THREE.ShaderMaterial({
             rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
 
-            // Time-based expansion for the doughnut effect
+            // Time-based expansion for the matrix water ripple effect
             float expansionRate = 0.15;
-            float bandWidth = 0.09; // Width of the rainbow band as it expands
+            float bandWidth = 0.15; // Width of the rainbow band as it expands
             float maxRadius = .35;
             float timeBetweenStarts = maxRadius / expansionRate; // Time it takes for a band to reach the max radius
 
             float distToCenter = distance(vUv, vec2(0.5, 0.5));
 
-            // Checkerboard pattern
+            // matrix pattern, only visible when in the bounderies of a 'ripple' expanding outward
             float matrixSquareSize = 0.1;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
             bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
-            vec3 color = vec3(0.0); // Default backbackground color
+            vec3 color = vec3(0.0); // Default backbackground color of black
 
             // Calculate the dynamic rainbow color
             float hue = mod(time * 0.1, 1.0);
@@ -86,10 +83,11 @@ const material = new THREE.ShaderMaterial({
             float t = fract(hue * 6.0); // Fractional part for smooth color transition
             vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-            // Calculate how many bands should be active based on the current time
+            // Calculate how many ripple bands should be active based on the current time
             float firstBandStartTime = 0.0;
             float maxBandIndex = floor((time - firstBandStartTime) / (maxRadius / expansionRate));
 
+            //apply the color if it is a grid line AND is within the current ripple
             for (float i = 0.0; i <= maxBandIndex; i++) {
                 float startTime = firstBandStartTime + (maxRadius / expansionRate) * i;
                 float currentRadius = expansionRate * (time - startTime);
@@ -110,7 +108,7 @@ const material = new THREE.ShaderMaterial({
                 color = lineColor; // Rainbow color at the cube's edges
             }
 
-            // Convert UV coordinates from [0,1] range to [-1,1] range (centered)
+            // Convert UV coordinates from [0,1] range to [-1,1] range (centered), for the purpose of drawing a circle with star in it
             vec2 centeredUv = vUv * 2.0 - 1.0;
 
             // Parameters for the circle
@@ -141,10 +139,11 @@ const material = new THREE.ShaderMaterial({
             starMask += line(centeredUv, starPoints[1], starPoints[3], lineWidth);
             starMask += line(centeredUv, starPoints[3], starPoints[0], lineWidth);
         
-            // Check for line drawing
+            // Check for line drawing, color if line
             if (starMask > 0.0) {
                 color = lineColor;
             }
+
             // Draw circle outline
             if (circle > 0.0) {
                 color = lineColor;
@@ -158,8 +157,8 @@ const cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
 
 camera.position.z = 5;
-
 const composer = new EffectComposer(renderer);
+
 
 composer.addPass(new RenderPass(scene, camera));
 
@@ -170,7 +169,7 @@ composer.addPass(bloomPass);
 function animate() {
 	requestAnimationFrame( animate );
 
-	cube.rotation.x += 0.01;
+	//cube.rotation.x += 0.01;
 	cube.rotation.y += 0.01;
 
     material.uniforms.time.value = performance.now() / 1000;
