@@ -40,12 +40,18 @@ const material = new THREE.ShaderMaterial({
     fragmentShader: `
         varying vec2 vUv;
         uniform float time;
-
-        float bandRadius(float startTime, float speed, float maxRadius) {
-            return mod((time - startTime) * speed, maxRadius);
+        
+        // Updated line function
+        float line(vec2 p, vec2 a, vec2 b, float width) {
+            vec2 ap = p - a;
+            vec2 ab = b - a;
+            float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
+            float dist = length(ap - t * ab);
+            return dist < width ? 1.0 : 0.0; // Draw if within width
         }
 
         void main() {
+            //array of rainbow colors to transition between for the lines
             vec3 rainbowColors[6];
             rainbowColors[0] = vec3(1.0, 0.0, 0.0); // Red
             rainbowColors[1] = vec3(1.0, 1.0, 0.0); // Yellow
@@ -54,20 +60,21 @@ const material = new THREE.ShaderMaterial({
             rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
             rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
-            // Time-based expansion for the doughnut effect
+
+            // Time-based expansion for the matrix water ripple effect
             float expansionRate = 0.15;
-            float bandWidth = 0.09; // Width of the rainbow band as it expands
+            float bandWidth = 0.15; // Width of the rainbow band as it expands
             float maxRadius = .35;
             float timeBetweenStarts = maxRadius / expansionRate; // Time it takes for a band to reach the max radius
 
             float distToCenter = distance(vUv, vec2(0.5, 0.5));
 
-            // Checkerboard pattern
+            // matrix pattern, only visible when in the bounderies of a 'ripple' expanding outward
             float matrixSquareSize = 0.1;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
             bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
-            vec3 color = vec3(0.0); // Default backbackground color
+            vec3 color = vec3(0.0); // Default backbackground color of black
 
             // Calculate the dynamic rainbow color
             float hue = mod(time * 0.1, 1.0);
@@ -76,10 +83,11 @@ const material = new THREE.ShaderMaterial({
             float t = fract(hue * 6.0); // Fractional part for smooth color transition
             vec3 lineColor = mix(rainbowColors[index1], rainbowColors[index2], t);
 
-            // Calculate how many bands should be active based on the current time
+            // Calculate how many ripple bands should be active based on the current time
             float firstBandStartTime = 0.0;
             float maxBandIndex = floor((time - firstBandStartTime) / (maxRadius / expansionRate));
 
+            //apply the color if it is a grid line AND is within the current ripple
             for (float i = 0.0; i <= maxBandIndex; i++) {
                 float startTime = firstBandStartTime + (maxRadius / expansionRate) * i;
                 float currentRadius = expansionRate * (time - startTime);
@@ -94,14 +102,53 @@ const material = new THREE.ShaderMaterial({
                 }
             }
 
-
-
             // Apply rainbow color to the cube's edges for a pulsing effect
             float edgeThreshold = 0.005;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 color = lineColor; // Rainbow color at the cube's edges
             }
 
+            // Convert UV coordinates from [0,1] range to [-1,1] range (centered), for the purpose of drawing a circle with star in it
+            vec2 centeredUv = vUv * 2.0 - 1.0;
+
+            // Parameters for the circle
+            float circleRadius = 0.7; // Circle radius
+            float lineWidth = 0.01; // Line width for drawing
+            float outlineWidth = 0.01; // Width of the outline
+
+            // Calculate the length from the center to the current fragment
+            float len = length(centeredUv);
+
+            // Create the circle outline by subtracting two smoothsteps to create a border
+            float innerEdge = circleRadius - outlineWidth;
+            float outerEdge = circleRadius;
+            float circle = smoothstep(innerEdge, innerEdge + 0.005, len) - smoothstep(outerEdge, outerEdge + 0.005, len);
+
+            // Updated positions of the five star points
+            float angleIncrement = 3.14159 * 2.0 / 5.0;
+            vec2 starPoints[5];
+            for (int i = 0; i < 5; i++) {
+                float angle = angleIncrement * float(i) + 3.14159 / 2.0; // Rotate to start at the top
+                starPoints[i] = vec2(cos(angle), sin(angle)) * circleRadius;
+            }
+            // Connect the star points with lines
+            float starMask = 0.0;
+            starMask += line(centeredUv, starPoints[0], starPoints[2], lineWidth);
+            starMask += line(centeredUv, starPoints[2], starPoints[4], lineWidth);
+            starMask += line(centeredUv, starPoints[4], starPoints[1], lineWidth);
+            starMask += line(centeredUv, starPoints[1], starPoints[3], lineWidth);
+            starMask += line(centeredUv, starPoints[3], starPoints[0], lineWidth);
+        
+            // Check for line drawing, color if line
+            if (starMask > 0.0) {
+                color = lineColor;
+            }
+
+            // Draw circle outline
+            if (circle > 0.0) {
+                color = lineColor;
+            }
+            
             gl_FragColor = vec4(color, 1.0);
         }
     ` // Fragment shader code
@@ -110,8 +157,8 @@ const cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
 
 camera.position.z = 5;
-
 const composer = new EffectComposer(renderer);
+
 
 composer.addPass(new RenderPass(scene, camera));
 
@@ -122,7 +169,7 @@ composer.addPass(bloomPass);
 function animate() {
 	requestAnimationFrame( animate );
 
-	cube.rotation.x += 0.01;
+	//cube.rotation.x += 0.01;
 	cube.rotation.y += 0.01;
 
     material.uniforms.time.value = performance.now() / 1000;
