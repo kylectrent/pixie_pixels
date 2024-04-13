@@ -70,7 +70,7 @@ const material = new THREE.ShaderMaterial({
             float distToCenter = distance(vUv, vec2(0.5, 0.5));
 
             // matrix pattern, only visible when in the bounderies of a 'ripple' expanding outward
-            float matrixSquareSize = 0.1;
+            float matrixSquareSize = 0.05;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
             bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
 
@@ -112,9 +112,9 @@ const material = new THREE.ShaderMaterial({
             vec2 centeredUv = vUv * 2.0 - 1.0;
 
             // Parameters for the circle
-            float circleRadius = 0.7; // Circle radius
-            float lineWidth = 0.01; // Line width for drawing
-            float outlineWidth = 0.01; // Width of the outline
+            float circleRadius = 0.8; // Circle radius
+            float lineWidth = 0.04 * .333; // Line width for drawing
+            float outlineWidth = 0.04; // Width of the outline
 
             // Calculate the length from the center to the current fragment
             float len = length(centeredUv);
@@ -131,6 +131,7 @@ const material = new THREE.ShaderMaterial({
                 float angle = angleIncrement * float(i) + 3.14159 / 2.0; // Rotate to start at the top
                 starPoints[i] = vec2(cos(angle), sin(angle)) * circleRadius;
             }
+
             // Connect the star points with lines
             float starMask = 0.0;
             starMask += line(centeredUv, starPoints[0], starPoints[2], lineWidth);
@@ -148,6 +149,9 @@ const material = new THREE.ShaderMaterial({
             if (circle > 0.0) {
                 color = lineColor;
             }
+
+            
+
             
             gl_FragColor = vec4(color, 1.0);
         }
