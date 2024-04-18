@@ -6,3 +6,9 @@ ultimatly have it be half bnlack and half white
     in more interesting way
     --could split star up and hvae different segments animate differently
 - have 'cross' at center of cube the matrix pattern emits from
+- circle bigger and make the line thickness of the 
+
+4/12
+- desync the color and star color change oscillation, have the color of the star olliscate whitish tint color
+- have the cube emit a golden aura, maybe shooting star like effects could be small cubes shooting off of it almost radioactivfe looking
+- try to apply this color changing algirthmn to the matrix lines somehow figure out how they did it https://threejs.org/examples/#webgl_framebuffer_texture
