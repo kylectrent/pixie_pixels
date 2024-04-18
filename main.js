@@ -8,12 +8,12 @@ const scene = new THREE.Scene();
 
 scene.add( new THREE.AmbientLight( 0x444444, 3 ) );
 
-				const light1 = new THREE.DirectionalLight( 0xffffff, 1.5 );
-				light1.position.set( 1, 1, 1 );
-				scene.add( light1 );
+const light1 = new THREE.DirectionalLight( 0xffffff, 1.5 );
+light1.position.set( 1, 1, 1 );
+scene.add( light1 );
 
-				const light2 = new THREE.DirectionalLight( 0xffffff, 4.5 );
-				light2.position.set( 0, - 1, 0 );
+const light2 = new THREE.DirectionalLight( 0xffffff, 4.5 );
+light2.position.set( 0, - 1, 0 );
 				scene.add( light2 );
 
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -204,10 +204,32 @@ let bloomParams = {
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), bloomParams.strength, bloomParams.radius, bloomParams.threshold);
 composer.addPass(bloomPass);
 
+const rainbowColors = [
+    new THREE.Color(1.0, 0.0, 1.0),  // Magenta
+    new THREE.Color(0.0, 0.0, 1.0), // Blue
+    new THREE.Color(0.0, 1.0, 1.0), // Cyan
+    new THREE.Color(0.0, 1.0, 0.0), // Green
+    new THREE.Color(1.0, 1.0, 0.0), // Yellow
+    new THREE.Color(1.0, 0.0, 0.0) // Red
+];
 
+// Update this function based on actual logic to get the current edge color
+function getCurrentEdgeColor(time) {
+    const hue = (time * 0.1) % 1.0;
+    const index1 = Math.floor(hue * 6.0);
+    const index2 = (index1 + 1) % 6;
+    const t = (hue * 6.0) % 1.0;
+    return rainbowColors[index1].clone().lerp(rainbowColors[index2], t);
+}
 
 function animate() {
 	requestAnimationFrame( animate );
+    const currentTime = performance.now() / 1000;
+
+    // Dynamically update particles color to match the cube's edge color
+    const edgeColor = getCurrentEdgeColor(currentTime);
+    particlesMaterial.color.set(edgeColor);
+    //particlesMaterial.emissive.set(edgeColor);
     particleSystem.rotation.y += 0.002; // Optional: rotate the particle system
 
 
