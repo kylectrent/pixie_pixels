@@ -19,9 +19,11 @@ scene.add( new THREE.AmbientLight( 0x444444, 3 ) );
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMappingExposure = Math.pow(0.9, 4.0);
+renderer.autoClear = false;
+document.body.appendChild(renderer.domElement);
 
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 
@@ -60,7 +62,6 @@ const material = new THREE.ShaderMaterial({
             rainbowColors[4] = vec3(0.0, 0.0, 1.0); // Blue
             rainbowColors[5] = vec3(1.0, 0.0, 1.0); // Magenta
 
-
             // Time-based expansion for the matrix water ripple effect
             float expansionRate = 0.15;
             float bandWidth = 0.15; // Width of the rainbow band as it expands
@@ -72,7 +73,7 @@ const material = new THREE.ShaderMaterial({
             // matrix pattern, only visible when in the bounderies of a 'ripple' expanding outward
             float matrixSquareSize = 0.05;
             vec2 linePosition = mod(vUv * vec2(1.0 / matrixSquareSize), 1.0);
-            bool isMatrixLine = linePosition.x < 0.05 || linePosition.y < 0.05;
+            bool isMatrixLine = linePosition.x < 0.1 || linePosition.y < 0.1;
 
             vec3 color = vec3(0.0); // Default backbackground color of black
 
@@ -103,7 +104,7 @@ const material = new THREE.ShaderMaterial({
             }
 
             // Apply rainbow color to the cube's edges for a pulsing effect
-            float edgeThreshold = 0.005;
+            float edgeThreshold = 0.0075;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 color = lineColor; // Rainbow color at the cube's edges
             }
@@ -139,19 +140,19 @@ const material = new THREE.ShaderMaterial({
             starMask += line(centeredUv, starPoints[4], starPoints[1], lineWidth);
             starMask += line(centeredUv, starPoints[1], starPoints[3], lineWidth);
             starMask += line(centeredUv, starPoints[3], starPoints[0], lineWidth);
-        
+                    
+            vec3 starColor1 = vec3(1.0, 1.0, 0.9);  // Lighter yellowish-white
+            vec3 starColor2 = vec3(1.0, 1.0, 0.0); // Yellow
+    
             // Check for line drawing, color if line
             if (starMask > 0.0) {
-                color = lineColor;
+                color = mix(starColor1, starColor2, 0.5); // 50% blend;
             }
 
             // Draw circle outline
             if (circle > 0.0) {
-                color = lineColor;
+                color = mix(starColor1, starColor2, 0.5);
             }
-
-            
-
             
             gl_FragColor = vec4(color, 1.0);
         }
@@ -166,7 +167,13 @@ const composer = new EffectComposer(renderer);
 
 composer.addPass(new RenderPass(scene, camera));
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .1, 0.1, 0.1);
+let bloomParams = {
+    strength: 1,
+    threshold: 0.85,
+    radius: 0.4
+};
+
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), bloomParams.strength, bloomParams.radius, bloomParams.threshold);
 composer.addPass(bloomPass);
 
 
@@ -176,8 +183,15 @@ function animate() {
 	//cube.rotation.x += 0.01;
 	cube.rotation.y += 0.01;
 
+    // Update the time for shader material
     material.uniforms.time.value = performance.now() / 1000;
 
+    // Update bloom strength dynamically to create a pulsating glow effect
+    const time = Date.now() * 0.002;  // Get time in seconds
+    bloomPass.strength = 1 + Math.sin(time) * 0.5;  // Oscillate strength between 0.5 and 1.5
+
+    // Optionally, adjust threshold or radius similarly if needed
+    // bloomPass.threshold = 0.85 + Math.sin(time) * 0.1;
     composer.render();
 
 	//renderer.render( scene, camera );
