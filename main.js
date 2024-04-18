@@ -25,6 +25,33 @@ renderer.toneMappingExposure = Math.pow(0.9, 4.0);
 renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
 
+
+
+// Particle System Setup
+const particlesCount = 5000;
+const particlesGeometry = new THREE.BufferGeometry();
+const posArray = new Float32Array(particlesCount * 3); // x,y,z for each particle
+
+for (let i = 0; i < particlesCount * 3; i++) {
+    // Fill the position array with random values
+    posArray[i] = (Math.random() - 0.5) * 10; // Spread particles over an area
+}
+
+particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+const particlesMaterial = new THREE.PointsMaterial({
+    size: 0.025,
+    color: 0xffffff,
+    transparent: true,
+    depthWrite: true,  // Ensure that particles write to the depth buffer
+    blending: THREE.AdditiveBlending  // Optional: for a glow effect
+});
+
+
+const particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+particleSystem.sortParticles = true;
+scene.add(particleSystem);
+
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 
 const material = new THREE.ShaderMaterial({
@@ -104,7 +131,7 @@ const material = new THREE.ShaderMaterial({
             }
 
             // Apply rainbow color to the cube's edges for a pulsing effect
-            float edgeThreshold = 0.0075;
+            float edgeThreshold = 0.011;
             if (vUv.x < edgeThreshold || vUv.x > 1.0 - edgeThreshold || vUv.y < edgeThreshold || vUv.y > 1.0 - edgeThreshold) {
                 color = lineColor; // Rainbow color at the cube's edges
             }
@@ -161,6 +188,7 @@ const material = new THREE.ShaderMaterial({
 const cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
 
+
 camera.position.z = 5;
 const composer = new EffectComposer(renderer);
 
@@ -177,8 +205,11 @@ const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, windo
 composer.addPass(bloomPass);
 
 
+
 function animate() {
 	requestAnimationFrame( animate );
+    particleSystem.rotation.y += 0.002; // Optional: rotate the particle system
+
 
 	//cube.rotation.x += 0.01;
 	cube.rotation.y += 0.01;
